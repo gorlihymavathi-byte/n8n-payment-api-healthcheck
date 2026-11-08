@@ -65,5 +65,10 @@ Structured Incident Schema: Captures normalized JSON metadata (health_status, fa
 
 Mock Engineering Dispatcher: Formats actionable, high-severity incident notifications ready for Slack/PagerDuty webhook integration.
 
-How to Import and Run
-1. Clone this repository:
+##How to Import and Run
+1. Clone this repository
+2. Open your local or cloud n8n instance.
+3. Select Workflows > Import from File and upload payment_api_health_check.json.
+4. Create an n8n Data Table named Payment API List matching the schema above.
+5. Click Test Workflow via the Manual Trigger node.
+
