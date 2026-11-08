@@ -50,3 +50,20 @@ An enterprise-grade, event-driven API health monitoring workflow built in n8n. D
                 │             └────────────┬─────────────┘     │
                 │                          │                   │
                 └──────────────────────────┴───────────────────┘
+
+
+Key Technical Features & Engineering Decisions
+Non-Blocking Resilience: Prevents total workflow halts when single services drop out. All iterations complete regardless of failure counts.
+
+Dual-Path Error Handling:
+
+Contract Failures: Catches non-2xx status codes or expected vs. actual status code mismatches.
+
+Network/Transport Failures: Handles network timeouts (10s threshold) and DNS/connection drops via dedicated n8n error outputs.
+
+Structured Incident Schema: Captures normalized JSON metadata (health_status, failure_type, service_name, endpoint_url, expected_status, actual_status, error_details, and checked_at) ready for downstream ingestion.
+
+Mock Engineering Dispatcher: Formats actionable, high-severity incident notifications ready for Slack/PagerDuty webhook integration.
+
+How to Import and Run
+1. Clone this repository:
