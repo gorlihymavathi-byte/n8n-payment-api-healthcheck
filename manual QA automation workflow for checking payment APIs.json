@@ -1,0 +1,416 @@
+{
+  "name": "manual QA automation workflow for checking payment APIs.",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a5588b2e-eb0d-42bf-9731-569acd502362",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "=IMEo277e73wnbwUk",
+          "mode": "id"
+        },
+        "returnAll": true
+      },
+      "id": "d7ff9dc0-b2c0-4234-aaa8-d832be84f856",
+      "name": "Get Payment API List",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c67cfaa7-07ab-4548-82f8-543cbd2df208",
+      "name": "Loop Through Payment APIs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.endpoint_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "938e0995-0143-493f-9f8f-d931c82bcaaa",
+      "name": "Test Payment Endpoint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        16,
+        16
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "status-contract-check",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": "={{ $('Loop Through Payment APIs').item.json.expected_status }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2d5637c4-886f-4918-8783-3248de1d173b",
+      "name": "Status Matches Contract?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "health-status",
+              "name": "health_status",
+              "value": "healthy",
+              "type": "string"
+            },
+            {
+              "id": "service-name",
+              "name": "service_name",
+              "value": "={{ $('Loop Through Payment APIs').item.json.service_name }}",
+              "type": "string"
+            },
+            {
+              "id": "endpoint-url",
+              "name": "endpoint_url",
+              "value": "={{ $('Loop Through Payment APIs').item.json.endpoint_url }}",
+              "type": "string"
+            },
+            {
+              "id": "actual-status",
+              "name": "actual_status",
+              "value": "={{ $json.statusCode }}",
+              "type": "number"
+            },
+            {
+              "id": "expected-status",
+              "name": "expected_status",
+              "value": "={{ $('Loop Through Payment APIs').item.json.expected_status }}",
+              "type": "number"
+            },
+            {
+              "id": "checked-at",
+              "name": "checked_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9003f9e5-7fa6-4723-adbd-b94dd12c7f3a",
+      "name": "Healthy Payment Integration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "failure-health-status",
+              "name": "health_status",
+              "value": "failed",
+              "type": "string"
+            },
+            {
+              "id": "failure-type",
+              "name": "failure_type",
+              "value": "={{ $json.statusCode !== undefined ? 'status_mismatch' : 'request_error' }}",
+              "type": "string"
+            },
+            {
+              "id": "failure-service-name",
+              "name": "service_name",
+              "value": "={{ $('Loop Through Payment APIs').item.json.service_name }}",
+              "type": "string"
+            },
+            {
+              "id": "failure-endpoint-url",
+              "name": "endpoint_url",
+              "value": "={{ $('Loop Through Payment APIs').item.json.endpoint_url }}",
+              "type": "string"
+            },
+            {
+              "id": "failure-expected-status",
+              "name": "expected_status",
+              "value": "={{ $('Loop Through Payment APIs').item.json.expected_status }}",
+              "type": "number"
+            },
+            {
+              "id": "failure-actual-status",
+              "name": "actual_status",
+              "value": "={{ $json.statusCode ?? 'unavailable' }}",
+              "type": "string"
+            },
+            {
+              "id": "failure-error-details",
+              "name": "error_details",
+              "value": "={{ $json.statusCode !== undefined ? 'Expected HTTP ' + $('Loop Through Payment APIs').item.json.expected_status + ', received HTTP ' + $json.statusCode : ($json.error?.message ?? $json.message ?? (typeof $json.error === 'string' ? $json.error : 'Request failed or timed out')) }}",
+              "type": "string"
+            },
+            {
+              "id": "failure-checked-at",
+              "name": "checked_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7ceb86cd-8782-4853-b3f6-5ffe4b4fa116",
+      "name": "Capture API Failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "alert-channel",
+              "name": "notification_channel",
+              "value": "engineering-alerts",
+              "type": "string"
+            },
+            {
+              "id": "alert-severity",
+              "name": "severity",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "alert-service",
+              "name": "service_name",
+              "value": "={{ $json.service_name }}",
+              "type": "string"
+            },
+            {
+              "id": "alert-endpoint",
+              "name": "endpoint_url",
+              "value": "={{ $json.endpoint_url }}",
+              "type": "string"
+            },
+            {
+              "id": "alert-expected",
+              "name": "expected_status",
+              "value": "={{ $json.expected_status }}",
+              "type": "number"
+            },
+            {
+              "id": "alert-actual",
+              "name": "actual_status",
+              "value": "={{ $json.actual_status }}",
+              "type": "string"
+            },
+            {
+              "id": "alert-details",
+              "name": "error_details",
+              "value": "={{ $json.error_details }}",
+              "type": "string"
+            },
+            {
+              "id": "alert-message",
+              "name": "notification_message",
+              "value": "={{ 'Payment API alert: ' + $json.service_name + ' failed. ' + $json.error_details + '. Endpoint: ' + $json.endpoint_url }}",
+              "type": "string"
+            },
+            {
+              "id": "alert-time",
+              "name": "checked_at",
+              "value": "={{ $json.checked_at }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1d34c296-4bfd-47b0-91f0-9bb7d82289b3",
+      "name": "Mock Engineering Alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        672,
+        208
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Payment API List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Payment API List": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Payment APIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Payment APIs": {
+      "main": [
+        null,
+        [
+          {
+            "node": "Test Payment Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Payment Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Status Matches Contract?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Capture API Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Matches Contract?": {
+      "main": [
+        [
+          {
+            "node": "Healthy Payment Integration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Capture API Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Healthy Payment Integration": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Payment APIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capture API Failure": {
+      "main": [
+        [
+          {
+            "node": "Mock Engineering Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Engineering Alert": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Payment APIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all"
+  },
+  "versionId": "ac66ea42-27e4-485e-989d-c6154196de0c",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "65add785ec038e5c3681ede24af5248f4456e26dd6723eb145ccbe375a24ae2e"
+  },
+  "nodeGroups": [],
+  "id": "7qb3fUtLYOR3YG78",
+  "tags": []
+}
